@@ -1,0 +1,21 @@
+seed: 123
+n_actions: 10
+feat_dim: 10
+n_pairs: 200000
+n_val_calib: 10000
+n_test: 50000
+hidden_sizes: [128, 128, 64]
+activation: "gelu"
+learning_rate: 3e-4
+weight_decay: 1e-4
+batch_size: 2048
+train_steps: 10000
+eval_every: 1000
+link: "beta_sigmoid"   # non-standard link for data gen
+beta_sigmoid_a: 2.0
+beta_sigmoid_b: 5.0
+kappa: 0.5             # KL budget
+sigma_smsspo: 0.5      # initial σ; will be annealed
+h_espo: 0.5            # kernel bandwidth; can be annealed
+save_dir: "outputs/sim"
+
