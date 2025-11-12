@@ -93,13 +93,13 @@ def main():
             # Calibration (β for KL budget)
             def logits_fn(X):
                 # For KL-uniform recalibration, we can use h = log πθ
-                return policy.logprobs(X)  # [B,A]
+                return policy(X)  # [B,A]
 
             beta = calibrate_beta_for_kappa(logits_fn, x_calib, kappa=cfg['kappa'])
 
             # Evaluate on test
             with torch.no_grad():
-                h_test = policy.logprobs(x_test)  # logits h
+                h_test = policy(x_test)  # logits h
                 p_test = torch.softmax(h_test / beta, dim=-1)  # calibrated policy
                 gt_reward = expected_true_reward(p_test, x_test, W)
                 kl_u = kl_to_uniform(p_test)
