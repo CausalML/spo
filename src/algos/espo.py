@@ -14,19 +14,25 @@ def espo_step(policy, x, y0, y1, z, optimizer, h=0.5, memory=None):
     t_all = t.detach()
     z_all = z.detach().float()
 
-    if memory is not None and memory['t'] is not None:
+    if memory is not None and memory.get("t",None) is not None:
         t_all = torch.cat([t_all, memory['t']], dim=0)
         z_all = torch.cat([z_all, memory['z']], dim=0)
 
     # Kernel weights: [B, N]
-    with torch.no_grad():
-        dists = t[:, None] - t_all[None, :]
-        W = gaussian_kernel(dists, h)
-        W = W / (W.sum(dim=1, keepdim=True) + 1e-12)
-        g_hat = (W * z_all[None, :]).sum(dim=1).clamp(1e-4, 1 - 1e-4)
+    dists = t[:, None] - t_all[None, :]
+    W = gaussian_kernel(dists, h)
+
+    # Zero out diagonal of left square so we get LOO
+    idx = torch.arange(x.size(0), device=W.device)
+    W[idx,idx] = 0.0
+
+    W = W / (W.sum(dim=1, keepdim=True) + 1e-12)
+    g_hat = (W * z_all[None, :]).sum(dim=1).clamp(1e-4, 1 - 1e-4)
 
     # Now treat g_hat(t) as target prob and optimize θ by Bernoulli log-likelihood
-    loss = - (z.float() * torch.log(g_hat) + (1 - z.float()) * torch.log(1 - g_hat)).mean()
+    # loss = - (z.float() * torch.log(g_hat) + (1 - z.float()) * torch.log(1 - g_hat)).mean()
+    loss = F.binary_cross_entropy(g_hat, z.float())
+    
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
     optimizer.step()
