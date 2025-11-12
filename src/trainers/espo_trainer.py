@@ -6,7 +6,7 @@ class ESPOTrainer(BaseTrainer):
     def __init__(self, accelerator, policy, lr, wd, h, save_dir, memory_cap=100000):
         super().__init__(accelerator, save_dir)
         self.policy = policy
-        self.optimizer = AdamW(self.policy.parameters(), lr=lr, weight_decay=wd)
+        self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
         self.h = h
         self.memory = {'t': None, 'z': None, 'cap': memory_cap}
         self.policy, self.optimizer = accelerator.prepare(self.policy, self.optimizer)

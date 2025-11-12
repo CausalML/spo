@@ -6,7 +6,7 @@ class DPOTrainer(BaseTrainer):
     def __init__(self, accelerator, policy, lr, wd, beta_train, save_dir):
         super().__init__(accelerator, save_dir)
         self.policy = policy
-        self.optimizer = AdamW(self.policy.parameters(), lr=lr, weight_decay=wd)
+        self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
         self.beta_train = beta_train
         self.policy, self.optimizer = accelerator.prepare(self.policy, self.optimizer)
 
