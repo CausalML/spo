@@ -23,16 +23,19 @@ def espo_step(policy, x, y0, y1, z, optimizer, h=0.5, memory=None):
     W = gaussian_kernel(dists, h)
 
     # Zero out diagonal of left square so we get LOO
-    idx = torch.arange(x.size(0), device=W.device)
-    W[idx,idx] = 0.0
+    loo_mask = 1.0 - F.one_hot(torch.arange(x.size(0), device=x.device), num_classes=t_all.size(0))
+    W = W * loo_mask
+    row_sums = W.sum(dim=1, keepdim=True)
+    fallback = loo_mask / (loo_mask.sum(dim=1, keepdim=True) + 1e-12)
+    cond = (row_sums > 1e-12).expand_as(W)
+    W = torch.where(cond, W/(row_sums + 1e-12), fallback)
 
-    W = W / (W.sum(dim=1, keepdim=True) + 1e-12)
-    g_hat = (W * z_all[None, :]).sum(dim=1).clamp(1e-4, 1 - 1e-4)
+    g_hat = (W * z_all[None, :]).sum(dim=1).clamp(1e-6, 1 - 1e-6)
 
     # Now treat g_hat(t) as target prob and optimize θ by Bernoulli log-likelihood
     # loss = - (z.float() * torch.log(g_hat) + (1 - z.float()) * torch.log(1 - g_hat)).mean()
     loss = F.binary_cross_entropy(g_hat, z.float())
-    
+
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
     optimizer.step()
