@@ -5,7 +5,7 @@ def smsspo_step(policy, x, y0, y1, z, optimizer, sigma=0.5, link_cdf='logistic')
     """
     Smoothed max-score objective: sum (2z-1) * K(t / σ).
     """
-    logp = policy.logprobs(x)
+    logp = policy(x)
     t = logp[torch.arange(x.size(0)), y1] - logp[torch.arange(x.size(0)), y0]
     s = 2 * z.float() - 1.0
     if link_cdf == 'logistic':

@@ -28,7 +28,7 @@ def pspo_step(policy, link_model, x, y0, y1, z, optimizer_theta, optimizer_link,
       2) Update θ with g frozen, maximizing sum log g(t(θ)).
     """
     # index difference under KL/uniform: t = log π(y1) - log π(y0)
-    logp = policy.logprobs(x)
+    logp = policy(x)
     t = logp[torch.arange(x.size(0)), y1] - logp[torch.arange(x.size(0)), y0]
 
     # Step A: update link g (few inner steps)

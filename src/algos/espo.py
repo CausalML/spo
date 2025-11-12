@@ -9,7 +9,7 @@ def espo_step(policy, x, y0, y1, z, optimizer, h=0.5, memory=None):
     ESPO: plug-in estimate g(t) = P(z=1 | t) via kernel smoothing on t.
     We compute a leave-one-out approximation within a minibatch + optional memory bank.
     """
-    logp = policy.logprobs(x)
+    logp = policy(x)
     t = logp[torch.arange(x.size(0)), y1] - logp[torch.arange(x.size(0)), y0]  # [B]
     t_all = t.detach()
     z_all = z.detach().float()

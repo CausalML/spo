@@ -15,14 +15,15 @@ class MLPPolicy(nn.Module):
         self.body = nn.Sequential(*layers)
         self.head = nn.Linear(prev, n_actions)
 
-    def forward(self, x):
-        logits = self.head(self.body(x))
-        return logits
+    def logits(self, x):   # logits
+        return self.head(self.body(x))
 
-    def logprobs(self, x):  # log πθ(y|x)
-        logits = self.forward(x)
+    def forward(self, x):   # log πθ(y|x)
+        logits = self.head(self.body(x))
         return logits.log_softmax(dim=-1)
 
-    def probs(self, x):
-        return self.forward(x).softmax(dim=-1)
+    def logprobs(self, x):  # also log πθ(y|x)
+        return self.forward(x)
 
+    def probs(self, x):     # πθ(y|x)
+        return self.forward(x).exp()

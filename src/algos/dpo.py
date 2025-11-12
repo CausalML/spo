@@ -6,7 +6,7 @@ def dpo_step(policy, x, y0, y1, z, beta_train=1.0, optimizer=None):
     DPO loss with uniform reference (log π_ref diff = 0).
     Loss per sample: -log σ((log π(y1)-log π(y0))/β) if z=1, and symmetric if z=0.
     """
-    logp = policy.logprobs(x)
+    logp = policy(x)
     lp1 = logp[torch.arange(x.size(0)), y1]
     lp0 = logp[torch.arange(x.size(0)), y0]
     t = (lp1 - lp0) / beta_train
