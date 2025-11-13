@@ -3,8 +3,8 @@ from .base_trainer import BaseTrainer, make_loader
 from src.algos.smsspo import smsspo_step
 
 class SMSSPOTrainer(BaseTrainer):
-    def __init__(self, accelerator, policy, lr, wd, sigma, save_dir, use_ddp=False):
-        super().__init__(accelerator, save_dir)
+    def __init__(self, accelerator, policy, lr, wd, sigma, use_ddp=False):
+        super().__init__(accelerator)
         self.policy = policy
         self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
         self.sigma = sigma

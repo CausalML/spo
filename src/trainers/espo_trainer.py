@@ -3,8 +3,8 @@ from .base_trainer import BaseTrainer, make_loader
 from src.algos.espo import espo_step
 
 class ESPOTrainer(BaseTrainer):
-    def __init__(self, accelerator, policy, lr, wd, h, save_dir, use_ddp=False, memory_cap=100000):
-        super().__init__(accelerator, save_dir)
+    def __init__(self, accelerator, policy, lr, wd, h, use_ddp=False, memory_cap=100000):
+        super().__init__(accelerator)
         self.policy = policy
         self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
         self.h = h

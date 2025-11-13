@@ -4,8 +4,8 @@ from .base_trainer import BaseTrainer, make_loader
 from src.algos.sft import sft_step
 
 class SFTTrainer(BaseTrainer):
-    def __init__(self, accelerator, policy, lr, wd, save_dir, use_ddp=False):
-        super().__init__(accelerator, save_dir)
+    def __init__(self, accelerator, policy, lr, wd, use_ddp=False):
+        super().__init__(accelerator)
         self.policy = policy
         self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
         # self.policy, self.optimizer = accelerator.prepare(self.policy, self.optimizer)

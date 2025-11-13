@@ -16,8 +16,6 @@ def make_loader(x, y0, y1, z, batch_size, shuffle=True):
     return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, drop_last=True)
 
 class BaseTrainer:
-    def __init__(self, accelerator: Accelerator, save_dir: str):
+    def __init__(self, accelerator: Accelerator):
         self.accelerator = accelerator
-        self.save_dir = save_dir
-        ensure_dir(self.save_dir)
 

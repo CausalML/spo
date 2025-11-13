@@ -3,8 +3,8 @@ from .base_trainer import BaseTrainer, make_loader
 from src.algos.dpo import dpo_step
 
 class DPOTrainer(BaseTrainer):
-    def __init__(self, accelerator, policy, lr, wd, beta_train, save_dir, use_ddp=False):
-        super().__init__(accelerator, save_dir)
+    def __init__(self, accelerator, policy, lr, wd, beta_train, use_ddp=False):
+        super().__init__(accelerator)
         self.policy = policy
         self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
         self.beta_train = beta_train

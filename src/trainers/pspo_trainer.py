@@ -4,8 +4,8 @@ from .base_trainer import BaseTrainer, make_loader
 from src.algos.pspo import MonoLink, pspo_step
 
 class PSPOTrainer(BaseTrainer):
-    def __init__(self, accelerator, policy, lr, wd, save_dir, use_ddp=False):
-        super().__init__(accelerator, save_dir)
+    def __init__(self, accelerator, policy, lr, wd, use_ddp=False):
+        super().__init__(accelerator)
         self.policy = policy
         self.link = MonoLink(n_knots=16, t_min=-6, t_max=6, gamma=0.5)
         self.opt_theta = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))

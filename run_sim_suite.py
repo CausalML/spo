@@ -26,7 +26,6 @@ def get_args():
     ap.add_argument("--train_steps", type=int, default=None)
     ap.add_argument("--batch_size", type=int, default=None)
     ap.add_argument("--save_dir", type=str, default=None)
-    # Option B: task-parallel only (one GPU per task). You can add a "ddp" mode later if you want.
     return ap.parse_args()
 
 def main():
@@ -44,24 +43,22 @@ def main():
     out_dir = Path(cfg['save_dir'])
     ensure_dir(str(out_dir))
     agg_csv_final = out_dir / "aggregate.csv"
-    # Per-rank file to avoid concurrent writes
     agg_csv_rank = out_dir / f"aggregate_rank{accelerator.process_index}.csv"
 
-    # ---- Build all tasks and shard across processes ----
-    # Each task is (run_index, algo_name). Seeds derive from cfg['seed'] + run_index.
-    all_tasks = list(product(range(args.n_runs), ALGOS))
-    my_tasks = accelerator.split_between_processes(all_tasks)
+    # --- Build all tasks and shard across ranks (task-parallel) ---
+    all_tasks = list(product(range(args.n_runs), ALGOS))  # [(run_idx, algo), ...]
+    rank = accelerator.process_index
+    world_size = accelerator.num_processes
+    my_tasks = all_tasks[rank::world_size]
 
-    accelerator.print(f"[rank {accelerator.process_index}] Assigned tasks: {my_tasks}")
+    accelerator.print(f"[rank {rank}] Assigned tasks: {my_tasks}")
 
     for run_idx, algo in my_tasks:
         seed = cfg['seed'] + run_idx
         set_seed(int(seed))
-        # + 1000 * accelerator.process_index)
 
         accelerator.print(f"\n=== Task (run={run_idx+1}/{args.n_runs}, seed={seed}, algo={algo}) ===")
 
-        # Generate dataset on this rank/GPU
         data = generate_dataset(
             n_pairs=cfg['n_pairs'],
             n_val_calib=cfg['n_val_calib'],
@@ -78,35 +75,29 @@ def main():
         x_calib = data['calib_x']
         x_test = data['test_x']
 
-        # Unique subdir per task (also separates ranks cleanly)
-        task_dir = out_dir / f"{algo}_seed{seed}_r{accelerator.process_index}"
-        ensure_dir(str(task_dir))
-
-        # Make the policy and trainer
         policy = MLPPolicy(input_dim=cfg['feat_dim'], n_actions=cfg['n_actions'],
                            hidden_sizes=tuple(cfg['hidden_sizes']),
                            activation=cfg['activation']).to(device)
 
         if algo == "sft":
             trainer = SFTTrainer(accelerator, policy, lr=cfg['learning_rate'],
-                                 wd=cfg['weight_decay'], save_dir=str(task_dir))
+                                 wd=cfg['weight_decay'])
         elif algo == "dpo":
             trainer = DPOTrainer(accelerator, policy, lr=cfg['learning_rate'],
-                                 wd=cfg['weight_decay'], beta_train=1.0, save_dir=str(task_dir))
+                                 wd=cfg['weight_decay'], beta_train=1.0)
         elif algo == "pspo":
             trainer = PSPOTrainer(accelerator, policy, lr=cfg['learning_rate'],
-                                  wd=cfg['weight_decay'], save_dir=str(task_dir))
+                                  wd=cfg['weight_decay'])
         elif algo == "espo":
             trainer = ESPOTrainer(accelerator, policy, lr=cfg['learning_rate'],
-                                  wd=cfg['weight_decay'], h=cfg['h_espo'], save_dir=str(task_dir))
+                                  wd=cfg['weight_decay'], h=cfg['h_espo'])
         elif algo == "smsspo":
             trainer = SMSSPOTrainer(accelerator, policy, lr=cfg['learning_rate'],
-                                    wd=cfg['weight_decay'], sigma=cfg['sigma_smsspo'], save_dir=str(task_dir))
+                                    wd=cfg['weight_decay'], sigma=cfg['sigma_smsspo'])
         else:
             raise ValueError(algo)
 
-        # --- Important: if a trainer DDP-wrapped the model, disable gradient sync
-        # so each rank trains independently (no cross-rank allreduce).
+        # If a trainer DDP-wrapped the model, disable cross-rank sync so each GPU trains independently
         try:
             ddp_model = getattr(trainer, "policy", None)
             if hasattr(ddp_model, "require_backward_grad_sync"):
@@ -115,41 +106,36 @@ def main():
             pass
 
         accelerator.print(f"-- [{algo.upper()}] training --")
-        policy = trainer.train(
-            x, y0, y1, z, steps=cfg['train_steps'], batch_size=cfg['batch_size']
-        )
+        policy = trainer.train(x, y0, y1, z, steps=cfg['train_steps'], batch_size=cfg['batch_size'])
 
-        # Calibrate β to meet KL budget κ (h := log πθ)
+        # h(x) := log πθ(y|x)  (forward returns log-probs)
         def logits_fn(X):
-            return policy(X)  # forward returns log-probs [B, A]
+            return policy(X)
 
         beta = calibrate_beta_for_kappa(logits_fn, x_calib, kappa=cfg['kappa'])
 
-        # Evaluate on test
         with torch.no_grad():
             h_test = policy(x_test)                      # log-probs
             p_test = torch.softmax(h_test / beta, dim=-1)
             gt_reward = expected_true_reward(p_test, x_test, W)
             kl_u = kl_to_uniform(p_test)
 
-        # Append to this-rank CSV (no contention)
         row = {
             'run': run_idx, 'algo': algo, 'seed': seed,
             'beta': float(beta), 'kappa_target': cfg['kappa'],
             'test_reward': float(gt_reward), 'test_kl_uniform': float(kl_u),
-            'rank': accelerator.process_index
+            'rank': rank
         }
         append_csv(str(agg_csv_rank), row)
         accelerator.print(f"[{algo.upper()}] reward={gt_reward:.4f}, KL_U={kl_u:.4f}, beta={beta:.4f}")
 
-    # ----- Merge per-rank CSVs into one file (rank 0 only) -----
+    # Merge per-rank CSVs -> aggregate.csv
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        # Collect and merge in rank order; keep a single header
         headers_written = False
         tmp_path = agg_csv_final.with_suffix(".csv.tmp")
         with open(tmp_path, "w") as fout:
-            for r in range(accelerator.num_processes):
+            for r in range(world_size):
                 path = out_dir / f"aggregate_rank{r}.csv"
                 if not path.exists():
                     continue
@@ -158,11 +144,10 @@ def main():
                 if not lines:
                     continue
                 if not headers_written:
-                    fout.write(lines[0])          # header
+                    fout.write(lines[0])   # header
                     headers_written = True
                     start = 1
                 else:
-                    # skip header for subsequent files
                     start = 1 if len(lines) > 0 else 0
                 for line in lines[start:]:
                     fout.write(line)
@@ -176,5 +161,13 @@ if __name__ == "__main__":
         from contextlib import suppress
         with suppress(Exception):
             if torch.distributed.is_available() and torch.distributed.is_initialized():
-                torch.distributed.barrier()
+                # On NCCL it's cleaner to pass device_ids to avoid the "guessing device" warning
+                try:
+                    backend = torch.distributed.get_backend()
+                except Exception:
+                    backend = None
+                if backend == "nccl" and torch.cuda.is_available():
+                    torch.distributed.barrier(device_ids=[torch.cuda.current_device()])
+                else:
+                    torch.distributed.barrier()
                 torch.distributed.destroy_process_group()
