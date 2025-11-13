@@ -3,13 +3,15 @@ from .base_trainer import BaseTrainer, make_loader
 from src.algos.espo import espo_step
 
 class ESPOTrainer(BaseTrainer):
-    def __init__(self, accelerator, policy, lr, wd, h, save_dir, memory_cap=100000):
+    def __init__(self, accelerator, policy, lr, wd, h, save_dir, use_ddp=False, memory_cap=100000):
         super().__init__(accelerator, save_dir)
         self.policy = policy
         self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
         self.h = h
         self.memory = {'t': None, 'z': None, 'cap': memory_cap}
-        self.policy, self.optimizer = accelerator.prepare(self.policy, self.optimizer)
+        # self.policy, self.optimizer = accelerator.prepare(self.policy, self.optimizer)
+        from ._utils import maybe_prepare
+        self.policy, self.optimizer = maybe_prepare(accelerator, use_ddp, self.policy, self.optimizer)
 
     def train(self, x, y0, y1, z, steps=10000, batch_size=2048):
         loader = make_loader(x, y0, y1, z, batch_size)

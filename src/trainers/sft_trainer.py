@@ -4,11 +4,13 @@ from .base_trainer import BaseTrainer, make_loader
 from src.algos.sft import sft_step
 
 class SFTTrainer(BaseTrainer):
-    def __init__(self, accelerator, policy, lr, wd, save_dir):
+    def __init__(self, accelerator, policy, lr, wd, save_dir, use_ddp=False):
         super().__init__(accelerator, save_dir)
         self.policy = policy
         self.optimizer = AdamW(self.policy.parameters(), lr=float(lr), weight_decay=float(wd))
-        self.policy, self.optimizer = accelerator.prepare(self.policy, self.optimizer)
+        # self.policy, self.optimizer = accelerator.prepare(self.policy, self.optimizer)
+        from ._utils import maybe_prepare
+        self.policy, self.optimizer = maybe_prepare(accelerator, use_ddp, self.policy, self.optimizer)
 
     def train(self, x, y0, y1, z, steps=10000, batch_size=2048, eval_every=1000):
         # winners only
