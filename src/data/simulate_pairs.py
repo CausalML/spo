@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from .utils import set_seed
-from src.rl.link_functions import beta_sigmoid_cdf
+from src.rl.link_functions import beta_sigmoid_cdf, double_sigmoid_cdf
 
 def make_reward_weights(n_actions, feat_dim, device):
     # Fixed true reward direction per action
@@ -46,6 +46,8 @@ def generate_dataset(
         delta = r1 - r0
         if link == 'beta_sigmoid':
             p = beta_sigmoid_cdf(delta, a=beta_a, b=beta_b)
+        if link == 'double_sigmoid':
+            p = double_sigmoid_cdf(delta, a=beta_a, b=beta_b)
         else:
             raise ValueError(f"Unknown link: {link}")
         z = torch.bernoulli(p).long()

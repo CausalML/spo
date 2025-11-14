@@ -1,4 +1,4 @@
-seed: 123
+seed: 1
 n_actions: 10
 feat_dim: 10
 n_pairs: 200000
@@ -11,11 +11,11 @@ weight_decay: 1e-4
 batch_size: 2048
 train_steps: 10000
 eval_every: 1000
-link: "beta_sigmoid"   # non-standard link for data gen
-beta_sigmoid_a: 2.0
-beta_sigmoid_b: 5.0
-kappa: 0.5             # KL budget
-sigma_smsspo: 0.5      # initial σ; will be annealed
-h_espo: 0.5            # kernel bandwidth; can be annealed
+link: "double_sigmoid"   # non-standard link for data gen
+beta_sigmoid_a: -1.25
+beta_sigmoid_b: 1.25
+kappa: 0.2             # KL budget
+sigma_smsspo: 0.1      # initial σ; will be annealed
+h_espo: None           # kernel bandwidth; can be annealed
 save_dir: "outputs/sim"
 
