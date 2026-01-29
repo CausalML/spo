@@ -8,3 +8,7 @@ Nathan Kallus
 ### Synthetic preference optimization experiment
 
 See `README.md` in `synthetic` directory.
+
+### Aligning Qwen3 on UltraFeedback
+
+See `README.md` in `ultrafeedback` directory.
