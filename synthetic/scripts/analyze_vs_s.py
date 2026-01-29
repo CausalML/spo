@@ -55,15 +55,15 @@ def main() -> None:
         .agg(mean_reward=("reward", "mean"),
              # low=("reward", lambda x: np.quantile(x, 0.05)),
              # high=("reward", lambda x: np.quantile(x, 0.95)))
-             low=("reward", lambda x: np.mean(x)-1.96*np.std(x)/np.sqrt(len(x))),
-             high=("reward", lambda x: np.mean(x)+1.96*np.std(x)/np.sqrt(len(x))))
+             low=("reward", lambda x: np.mean(x)-1.64*np.std(x)/np.sqrt(len(x))),
+             high=("reward", lambda x: np.mean(x)+1.64*np.std(x)/np.sqrt(len(x))))
         .sort_values(["s", "method"])
     )
 
     ensure_dir(args.out_dir)
     summary.to_csv(os.path.join(args.out_dir, "reward_vs_s_table.csv"), index=False)
 
-    plt.figure(figsize=(4, 4))
+    plt.figure(figsize=(4, 2.5))
     for method, sub in summary.groupby("method"):
         plt.plot(sub["s"], sub["mean_reward"], marker="o", label=method)
         plt.fill_between(sub["s"], sub["low"], sub["high"], alpha=0.2)

@@ -39,7 +39,7 @@ def main() -> None:
     )
     pareto.to_csv(os.path.join(args.out_dir, "pareto_table.csv"), index=False)
 
-    plt.figure(figsize=(4, 4))
+    plt.figure(figsize=(4, 2.5))
     for method, sub in pareto.groupby("method"):
         plt.plot(sub["avg_kl"], sub["avg_reward"], marker="o", label=method)
     plt.xlabel("Average KL")
