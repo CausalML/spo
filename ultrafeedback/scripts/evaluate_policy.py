@@ -36,7 +36,7 @@ def main():
     parser.add_argument("--cache_dir", default="data/cache")
     parser.add_argument("--eval_samples", type=int, default=256)
     parser.add_argument("--seed", type=int, default=123)
-    parser.add_argument("--beta_grid", default="0.5,1.0,2.0,4.0")
+    parser.add_argument("--beta_grid", default="0.5,0.75,1.0,1.25,1.5,2.0")
     parser.add_argument("--max_new_tokens", type=int, default=256)
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument("--top_p", type=float, default=0.95)

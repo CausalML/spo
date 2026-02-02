@@ -77,15 +77,35 @@ def main():
         std_reward=("avg_reward", "std"),
         count=("avg_reward", "count"),
     ).reset_index()
-    summary["ci95"] = 1.96 * summary["std_reward"] / np.sqrt(summary["count"].clip(lower=1))
+    # summary["ci90"] = 1.64 * summary["std_reward"] / np.sqrt(summary["count"].clip(lower=1))
 
-    plt.figure(figsize=(4, 2.5))
+    dpo = conv_df[conv_df["method"] == "dpo"][["shift", "n", "seed", "avg_reward"]].rename(
+        columns={"avg_reward": "dpo_reward"}
+    )
+    merged = conv_df.merge(dpo, on=["shift", "n", "seed"], how="left")
+    merged["diff_to_dpo"] = merged["avg_reward"] - merged["dpo_reward"]
+    diff_summary = merged.groupby(["shift", "method", "n"]).agg(
+        diff_mean=("diff_to_dpo", "mean"),
+        diff_std=("diff_to_dpo", "std"),
+        diff_count=("diff_to_dpo", "count"),
+    ).reset_index()
+    diff_summary["diff_ci90"] = 1.64 * diff_summary["diff_std"] / np.sqrt(
+        diff_summary["diff_count"].clip(lower=1)
+    )
+
+    summary = summary.merge(diff_summary[["shift", "method", "n", "diff_ci90"]], on=["shift", "method", "n"], how="left")
+
+    methods = sorted(summary["method"].unique())
+    offsets = np.linspace(-0.03, 0.03, len(methods))
+    jitter = dict(zip(methods, offsets))
+
+    plt.figure(figsize=(5, 3))
     for method, group in summary.groupby("method"):
-        plt.errorbar(group["shift"], group["mean_reward"], marker="o", label=method)
+        plt.errorbar(group["shift"].to_numpy(dtype=float) + jitter.get(method, 0.0), group["mean_reward"], yerr=group["diff_ci90"], marker="o", label=method)
     plt.xlabel("Logistic link shift s")
     plt.ylabel("Reward at KL≈{:.2f}".format(kappa))
     # plt.title(f"Reward vs shift (n={int(n)})")
-    plt.legend()
+    plt.legend(loc="lower left")
     plt.tight_layout()
     shift_path = os.path.join(args.out_dir, f"reward_vs_shift_n{int(n)}.pdf")
     plt.savefig(shift_path, dpi=200)

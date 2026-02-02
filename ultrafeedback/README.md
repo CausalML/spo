@@ -62,8 +62,11 @@ python scripts/evaluate_policy.py \
 python scripts/run_grid.py \
   --seeds 123,456,789,1011 \
   --link_shifts 0.0,0.5,1.0,2.0 \
+  --beta_grid 0.5,0.75,1.0,1.25,1.5,2.0 \
   --n_list 5000 \
   --methods dpo,pspo,ospo,rspo \
+  --base_model_id Qwen/Qwen3-0.6B \
+  --reward_model_id Skywork/Skywork-Reward-V2-Qwen3-1.7B \
   --gpus 0,1,2,3,4,5,6,7
 ```
 

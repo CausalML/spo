@@ -38,7 +38,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--runs_glob", default="outputs/*_s*_shift*_n*")
     parser.add_argument("--eval_dir", default="outputs/eval_v4")
-    parser.add_argument("--beta_grid", default="0.25,0.5,0.75,1.0,1.25,1.5,2.0,2.5,3.0,4.0")
+    parser.add_argument("--beta_grid", default="0.5,0.75,1.0,1.25,1.5,2.0")
     parser.add_argument("--base_model_id", default="Qwen/Qwen3-0.6B")
     parser.add_argument("--reward_model_id", default="Skywork/Skywork-Reward-V2-Qwen3-1.7B")
     parser.add_argument("--dataset_id", default="openbmb/UltraFeedback")
